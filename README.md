@@ -16,6 +16,7 @@ The first version supports:
 - GPS through MeshCore's existing RAK4631 sensor support.
 - Optional periodic private-channel status, charger-error alarms and stale-BLE alarms.
 - Reproducible GitHub Actions firmware builds.
+- Tagged GitHub Releases with UF2, Nordic DFU ZIP and HEX downloads.
 
 ## Privacy
 

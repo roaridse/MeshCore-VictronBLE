@@ -37,6 +37,31 @@ The primary artifact is:
 .build/MeshCore/.pio/build/RAK_4631_victron_sensor/firmware.zip
 ```
 
+## GitHub releases and UF2
+
+Every push and pull request builds and verifies `firmware.zip`, `firmware.hex`
+and an nRF52840 `firmware.uf2`. A normal build can be downloaded from the
+workflow run under **Actions → Build firmware → Artifacts**.
+
+To publish a GitHub Release, first update `FIRMWARE_VERSION` in
+`config/platformio.local.ini`, commit and push the change, then create and push
+a matching version tag:
+
+```sh
+git tag -a v0.2.0 -m "v0.2.0"
+git push origin v0.2.0
+```
+
+A tag beginning with `v` runs the same tests and build before a separate job is
+allowed to create the release. It attaches versioned `.uf2`, `.zip` and `.hex`
+files and generates release notes from the commits. Re-running the job replaces
+the assets on an existing release.
+
+The UF2 uses the official nRF52840 family ID `0xADA52840` and starts at the
+RAK4631 application address `0x26000`. Double-press RESET to enter the RAK4631
+UF2 bootloader, then copy the `.uf2` file to the mounted bootloader drive. This
+is an application update; it does not install or replace the bootloader.
+
 Run the portable decoder tests separately with:
 
 ```sh
