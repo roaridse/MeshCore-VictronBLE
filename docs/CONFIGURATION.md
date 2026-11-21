@@ -58,15 +58,53 @@ The MAC address comes from the RAWv2 payload, so a changing BLE advertiser
 address does not affect identification. Ruuvi BLE broadcasts themselves are
 unencrypted; only their onward MeshCore transport is private.
 
+## Discover and add a Shelly BLU H&T
+
+Leave the sensor near the node for up to a few minutes, because the Shelly
+normally broadcasts one BTHome packet per minute. Then run:
+
+```text
+shelly scan
+```
+
+Inspect a result and add it by its advertised BLE address:
+
+```text
+shelly scan 0
+shelly add AA:BB:CC:DD:EE:FF Cabin
+shelly list
+```
+
+Names are limited to 15 characters without spaces. Up to four Shelly sensors
+can be configured. Remove one with:
+
+```text
+shelly remove AA:BB:CC:DD:EE:FF
+```
+
+The current implementation accepts unencrypted BTHome v2 packets containing
+the Shelly BLU H&T temperature (`0x45`), humidity (`0x2E`) and battery (`0x01`)
+objects. If BTHome encryption has been enabled for the sensor in the Shelly
+app, disable it before discovery; encrypted BTHome keys are not supported yet.
+The BLE broadcast is readable nearby, while its onward MeshCore telemetry is
+carried in encrypted peer packets.
+
 ## Add a Victron device
 
-In VictronConnect, open the charger, enable **Instant readout via Bluetooth**,
+In VictronConnect, open the charger or battery monitor, enable
+**Instant readout via Bluetooth**,
 then open **Product info → Instant readout details → Show**. Copy the MAC
 address and 32-hex-character encryption key.
 
 ```text
 victron add AA:BB:CC:DD:EE:FF 00112233445566778899AABBCCDDEEFF MPPT
 victron list
+```
+
+BMV-712 and SmartShunt use the same command and key format:
+
+```text
+victron add AA:BB:CC:DD:EE:FF 00112233445566778899AABBCCDDEEFF SmartShunt
 ```
 
 Names are currently limited to 15 characters without spaces. Add up to four

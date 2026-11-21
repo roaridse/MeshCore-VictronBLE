@@ -12,10 +12,11 @@ constexpr size_t kMaxEncryptedPayload = 16;
 
 enum class RecordType : uint8_t {
   SolarCharger = 0x01,
+  BatteryMonitor = 0x02,
   AcCharger = 0x08,
 };
 
-enum ValidField : uint16_t {
+enum ValidField : uint32_t {
   BatteryVoltage = 1u << 0,
   BatteryCurrent = 1u << 1,
   BatteryPower = 1u << 2,
@@ -25,13 +26,27 @@ enum ValidField : uint16_t {
   AcCurrent = 1u << 6,
   Output2 = 1u << 7,
   Output3 = 1u << 8,
+  TimeToGo = 1u << 9,
+  AlarmReason = 1u << 10,
+  AuxInput = 1u << 11,
+  ConsumedAh = 1u << 12,
+  StateOfCharge = 1u << 13,
+  StarterVoltage = 1u << 14,
+  MidpointVoltage = 1u << 15,
+};
+
+enum class AuxInputType : uint8_t {
+  StarterVoltage = 0,
+  MidpointVoltage = 1,
+  Temperature = 2,
+  None = 3,
 };
 
 struct Reading {
   RecordType record_type = RecordType::SolarCharger;
   uint16_t product_id = 0;
   uint16_t data_counter = 0;
-  uint16_t valid = 0;
+  uint32_t valid = 0;
   uint8_t device_state = 0xFF;
   uint8_t charger_error = 0xFF;
   float battery_voltage = 0;
@@ -45,6 +60,13 @@ struct Reading {
   float output2_current = 0;
   float output3_voltage = 0;
   float output3_current = 0;
+  uint16_t time_to_go_minutes = 0;
+  uint16_t alarm_reason = 0;
+  AuxInputType aux_input_type = AuxInputType::None;
+  float consumed_ah = 0;
+  float state_of_charge_percent = 0;
+  float starter_voltage = 0;
+  float midpoint_voltage = 0;
 };
 
 enum class DecodeResult : uint8_t {

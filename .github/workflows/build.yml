@@ -49,7 +49,7 @@ jobs:
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RAK4631-Victron-Ruuvi-BLE
+          name: RAK4631-Victron-Ruuvi-Shelly-BLE
           path: |
             meshcore/.pio/build/RAK_4631_victron_sensor/firmware.zip
             meshcore/.pio/build/RAK_4631_victron_sensor/firmware.uf2
@@ -67,14 +67,14 @@ jobs:
       - name: Download verified firmware
         uses: actions/download-artifact@v4
         with:
-          name: RAK4631-Victron-Ruuvi-BLE
+          name: RAK4631-Victron-Ruuvi-Shelly-BLE
           path: release-files
 
       - name: Give release assets versioned names
         run: |
-          mv release-files/firmware.uf2 "release-files/RAK4631-Victron-Ruuvi-${GITHUB_REF_NAME}.uf2"
-          mv release-files/firmware.zip "release-files/RAK4631-Victron-Ruuvi-${GITHUB_REF_NAME}.zip"
-          mv release-files/firmware.hex "release-files/RAK4631-Victron-Ruuvi-${GITHUB_REF_NAME}.hex"
+          mv release-files/firmware.uf2 "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.uf2"
+          mv release-files/firmware.zip "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.zip"
+          mv release-files/firmware.hex "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.hex"
 
       - name: Create or update GitHub Release
         env:

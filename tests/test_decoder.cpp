@@ -6,6 +6,7 @@
 
 #include "VictronDecoder.h"
 #include "RuuviDecoder.h"
+#include "ShellyDecoder.h"
 
 namespace {
 
@@ -77,6 +78,56 @@ void testAcCharger() {
   assert(near(reading.ac_current, 1.2f));
 }
 
+void testBatteryMonitorTemperature() {
+  uint8_t payload[15] = {};
+  putBitsLe(payload, 0, 16, 125);        // 125 minutes remaining
+  putBitsLe(payload, 16, 16, 1278);      // 12.78 V
+  putBitsLe(payload, 32, 16, 0x0024);    // Alarm reason bitfield
+  putBitsLe(payload, 48, 16, 29815);     // 298.15 K = 25.00 C
+  putBitsLe(payload, 64, 2, 2);          // Temperature aux mode
+  putBitsLe(payload, 66, 22,
+            static_cast<uint32_t>(-12345) & 0x3FFFFF);  // -12.345 A
+  putBitsLe(payload, 88, 20, 456);       // -45.6 Ah as displayed
+  putBitsLe(payload, 108, 10, 873);      // 87.3% SOC
+
+  victron::Reading reading;
+  assert(victron::decodePlaintext(victron::RecordType::BatteryMonitor,
+                                  0xA389, 19, payload, sizeof(payload),
+                                  reading) == victron::DecodeResult::Ok);
+  assert(strcmp(victron::recordTypeName(reading.record_type), "battery") == 0);
+  assert(reading.time_to_go_minutes == 125);
+  assert(near(reading.battery_voltage, 12.78f));
+  assert(near(reading.battery_current, -12.345f));
+  assert(near(reading.battery_power, -157.769f));
+  assert(reading.alarm_reason == 0x0024);
+  assert(near(reading.consumed_ah, -45.6f));
+  assert(near(reading.state_of_charge_percent, 87.3f));
+  assert(reading.aux_input_type == victron::AuxInputType::Temperature);
+  assert(near(reading.temperature, 25.0f));
+}
+
+void testBatteryMonitorMidpointAndUnavailable() {
+  uint8_t payload[15] = {};
+  putBitsLe(payload, 0, 16, 0xFFFF);     // Time to go unavailable
+  putBitsLe(payload, 16, 16, 2661);      // 26.61 V
+  putBitsLe(payload, 48, 16, 1330);      // 13.30 V midpoint
+  putBitsLe(payload, 64, 2, 1);          // Midpoint aux mode
+  putBitsLe(payload, 66, 22, 0x1FFFFF);  // Current unavailable
+  putBitsLe(payload, 88, 20, 0xFFFFF);   // Consumed Ah unavailable
+  putBitsLe(payload, 108, 10, 0x3FF);    // SOC unavailable
+
+  victron::Reading reading;
+  assert(victron::decodePlaintext(victron::RecordType::BatteryMonitor,
+                                  0xC039, 20, payload, sizeof(payload),
+                                  reading) == victron::DecodeResult::Ok);
+  assert(near(reading.battery_voltage, 26.61f));
+  assert(near(reading.midpoint_voltage, 13.30f));
+  assert(reading.valid & victron::MidpointVoltage);
+  assert(!(reading.valid & victron::BatteryCurrent));
+  assert(!(reading.valid & victron::StateOfCharge));
+  assert(!(reading.valid & victron::TimeToGo));
+}
+
 void testInvalidLengths() {
   uint8_t payload[4] = {};
   victron::Reading reading;
@@ -115,14 +166,54 @@ void testRuuviRejectsOtherFormats() {
   assert(!ruuvi::decodeRawV2(payload, sizeof(payload) - 1, reading));
 }
 
+void testShellyBluHtBTHomeV2() {
+  // UUID FCD2, unencrypted BTHome v2, packet 42, battery 95%, humidity
+  // 51%, button absent, temperature -4.3 C.
+  const uint8_t payload[] = {
+      0xD2, 0xFC, 0x40, 0x00, 0x2A, 0x01, 0x5F,
+      0x2E, 0x33, 0x45, 0xD5, 0xFF};
+  shelly::Reading reading;
+  assert(shelly::decodeBTHomeV2(payload, sizeof(payload), reading));
+  assert(reading.packet_id == 42);
+  assert(reading.battery_percent == 95);
+  assert(reading.humidity_percent == 51);
+  assert(near(reading.temperature_c, -4.3f));
+  assert((reading.valid & shelly::Button) == 0);
+}
+
+void testShellyBluHtButtonAndDeviceInfo() {
+  const uint8_t payload[] = {
+      0xD2, 0xFC, 0x44, 0x01, 0x64, 0x2E, 0x31, 0x3A, 0x01,
+      0x45, 0xD7, 0x00, 0xF0, 0x11, 0x00, 0xF2, 0x01, 0x02, 0x03};
+  shelly::Reading reading;
+  assert(shelly::decodeBTHomeV2(payload, sizeof(payload), reading));
+  assert(reading.battery_percent == 100);
+  assert(reading.humidity_percent == 49);
+  assert(near(reading.temperature_c, 21.5f));
+  assert(reading.button_event == 1);
+}
+
+void testShellyRejectsEncryptedAndMalformed() {
+  const uint8_t encrypted[] = {0xD2, 0xFC, 0x41, 0x00, 0x01};
+  shelly::Reading reading;
+  assert(!shelly::decodeBTHomeV2(encrypted, sizeof(encrypted), reading));
+  const uint8_t truncated[] = {0xD2, 0xFC, 0x40, 0x45, 0xD7};
+  assert(!shelly::decodeBTHomeV2(truncated, sizeof(truncated), reading));
+}
+
 }  // namespace
 
 int main() {
   testSolarCharger();
   testAcCharger();
+  testBatteryMonitorTemperature();
+  testBatteryMonitorMidpointAndUnavailable();
   testInvalidLengths();
   testRuuviRawV2();
   testRuuviRejectsOtherFormats();
-  puts("Victron and Ruuvi decoder tests passed");
+  testShellyBluHtBTHomeV2();
+  testShellyBluHtButtonAndDeviceInfo();
+  testShellyRejectsEncryptedAndMalformed();
+  puts("Victron, Ruuvi and Shelly decoder tests passed");
   return 0;
 }

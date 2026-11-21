@@ -5,6 +5,7 @@
 #include "VictronConfig.h"
 #include "VictronDecoder.h"
 #include "RuuviScanner.h"
+#include "ShellyScanner.h"
 
 #ifdef NRF52_PLATFORM
 #include <bluefruit.h>
@@ -22,7 +23,8 @@ struct DeviceState {
 
 class Scanner {
  public:
-  bool begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner);
+  bool begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner,
+             shelly::Scanner* shelly_scanner);
   void loop() {}
 
   const DeviceState& state(uint8_t index) const { return states_[index]; }
@@ -31,6 +33,7 @@ class Scanner {
  private:
   ConfigStore* config_ = nullptr;
   ruuvi::Scanner* ruuvi_scanner_ = nullptr;
+  shelly::Scanner* shelly_scanner_ = nullptr;
   DeviceState states_[kMaxDevices];
 
 #ifdef NRF52_PLATFORM

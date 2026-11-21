@@ -4,7 +4,7 @@
 
 The workflow in `.github/workflows/build.yml` runs the decoder tests, checks
 out the pinned MeshCore revision and builds the RAK4631 firmware. Download the
-`RAK4631-Victron-Ruuvi-BLE` artifact from a completed workflow run.
+`RAK4631-Victron-Ruuvi-Shelly-BLE` artifact from a completed workflow run.
 
 No keys are required during compilation. All device and channel credentials
 are provisioned after flashing, so public CI logs and firmware artifacts do
@@ -48,8 +48,8 @@ To publish a GitHub Release, first update `FIRMWARE_VERSION` in
 a matching version tag:
 
 ```sh
-git tag -a v0.2.0 -m "v0.2.0"
-git push origin v0.2.0
+git tag -a v0.3.0 -m "v0.3.0"
+git push origin v0.3.0
 ```
 
 A tag beginning with `v` runs the same tests and build before a separate job is

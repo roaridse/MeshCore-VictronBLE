@@ -10,5 +10,7 @@ g++ -std=c++17 -Wall -Wextra -Werror \
   "${project_dir}/firmware/victron/VictronDecoder.cpp" \
   "${project_dir}/firmware/ruuvi/RuuviDecoder.cpp" \
   -I "${project_dir}/firmware/ruuvi" \
+  "${project_dir}/firmware/shelly/ShellyDecoder.cpp" \
+  -I "${project_dir}/firmware/shelly" \
   -o "${output}"
 "${output}"

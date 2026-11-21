@@ -26,6 +26,12 @@ uint32_t readBitsLe(const uint8_t* data, size_t bit_offset, uint8_t bit_count) {
   return value;
 }
 
+int32_t signExtend(uint32_t value, uint8_t bit_count) {
+  const uint32_t sign_bit = 1ul << (bit_count - 1);
+  if (value & sign_bit) value |= ~((1ul << bit_count) - 1);
+  return static_cast<int32_t>(value);
+}
+
 bool decodeSigned16(int16_t raw, float scale, float& value) {
   if (raw == 0x7FFF) return false;
   value = static_cast<float>(raw) * scale;
@@ -132,6 +138,74 @@ DecodeResult decodeAcCharger(const uint8_t* data, size_t length, Reading& out) {
   return DecodeResult::Ok;
 }
 
+DecodeResult decodeBatteryMonitor(const uint8_t* data, size_t length,
+                                  Reading& out) {
+  if (length < 15) return DecodeResult::InvalidPayload;
+
+  const uint32_t time_to_go = readBitsLe(data, 0, 16);
+  const int16_t voltage = static_cast<int16_t>(readBitsLe(data, 16, 16));
+  out.alarm_reason = static_cast<uint16_t>(readBitsLe(data, 32, 16));
+  const uint32_t aux = readBitsLe(data, 48, 16);
+  out.aux_input_type = static_cast<AuxInputType>(readBitsLe(data, 64, 2));
+  const uint32_t current = readBitsLe(data, 66, 22);
+  const uint32_t consumed_ah = readBitsLe(data, 88, 20);
+  const uint32_t state_of_charge = readBitsLe(data, 108, 10);
+
+  out.valid |= AlarmReason | AuxInput;
+  if (time_to_go != 0xFFFF) {
+    out.time_to_go_minutes = static_cast<uint16_t>(time_to_go);
+    out.valid |= TimeToGo;
+  }
+
+  float value;
+  if (decodeSigned16(voltage, 0.01f, value)) {
+    out.battery_voltage = value;
+    out.valid |= BatteryVoltage;
+  }
+  if (current != 0x1FFFFF) {
+    out.battery_current = signExtend(current, 22) * 0.001f;
+    out.valid |= BatteryCurrent;
+  }
+  if ((out.valid & (BatteryVoltage | BatteryCurrent)) ==
+      (BatteryVoltage | BatteryCurrent)) {
+    out.battery_power = out.battery_voltage * out.battery_current;
+    out.valid |= BatteryPower;
+  }
+  if (consumed_ah != 0xFFFFF) {
+    // VictronConnect displays consumed charge as a negative value.
+    out.consumed_ah = -static_cast<float>(consumed_ah) * 0.1f;
+    out.valid |= ConsumedAh;
+  }
+  if (state_of_charge != 0x3FF) {
+    out.state_of_charge_percent = state_of_charge * 0.1f;
+    out.valid |= StateOfCharge;
+  }
+
+  switch (out.aux_input_type) {
+    case AuxInputType::StarterVoltage:
+      if (decodeSigned16(static_cast<int16_t>(aux), 0.01f, value)) {
+        out.starter_voltage = value;
+        out.valid |= StarterVoltage;
+      }
+      break;
+    case AuxInputType::MidpointVoltage:
+      if (decodeSigned16(static_cast<int16_t>(aux), 0.01f, value)) {
+        out.midpoint_voltage = value;
+        out.valid |= MidpointVoltage;
+      }
+      break;
+    case AuxInputType::Temperature:
+      if (aux != 0xFFFF) {
+        out.temperature = aux * 0.01f - 273.15f;
+        out.valid |= Temperature;
+      }
+      break;
+    case AuxInputType::None:
+      break;
+  }
+  return DecodeResult::Ok;
+}
+
 }  // namespace
 
 DecodeResult decodePlaintext(RecordType type, uint16_t product_id,
@@ -145,6 +219,8 @@ DecodeResult decodePlaintext(RecordType type, uint16_t product_id,
   switch (type) {
     case RecordType::SolarCharger:
       return decodeSolar(plaintext, length, out);
+    case RecordType::BatteryMonitor:
+      return decodeBatteryMonitor(plaintext, length, out);
     case RecordType::AcCharger:
       return decodeAcCharger(plaintext, length, out);
     default:
@@ -161,7 +237,8 @@ DecodeResult decodeAdvertisement(const uint8_t* data, size_t length,
   if (data[7] != key[0]) return DecodeResult::WrongKey;
 
   const RecordType type = static_cast<RecordType>(data[4]);
-  if (type != RecordType::SolarCharger && type != RecordType::AcCharger) {
+  if (type != RecordType::SolarCharger &&
+      type != RecordType::BatteryMonitor && type != RecordType::AcCharger) {
     return DecodeResult::UnsupportedRecord;
   }
   const size_t encrypted_length = length - 8;
@@ -183,6 +260,7 @@ DecodeResult decodeAdvertisement(const uint8_t* data, size_t length,
 const char* recordTypeName(RecordType type) {
   switch (type) {
     case RecordType::SolarCharger: return "solar";
+    case RecordType::BatteryMonitor: return "battery";
     case RecordType::AcCharger: return "ac";
     default: return "unsupported";
   }

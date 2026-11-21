@@ -9,9 +9,11 @@ namespace victron {
 #ifdef NRF52_PLATFORM
 Scanner* Scanner::instance_ = nullptr;
 
-bool Scanner::begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner) {
+bool Scanner::begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner,
+                    shelly::Scanner* shelly_scanner) {
   config_ = config;
   ruuvi_scanner_ = ruuvi_scanner;
+  shelly_scanner_ = shelly_scanner;
   memset(states_, 0, sizeof(states_));
   instance_ = this;
 
@@ -46,6 +48,11 @@ void Scanner::handleReport(ble_gap_evt_adv_report_t* report) {
     const uint8_t field_length = bytes[0];
     if (field_length == 0 || static_cast<size_t>(field_length + 1) > remaining) break;
     const uint8_t type = bytes[1];
+    if (type == BLE_GAP_AD_TYPE_SERVICE_DATA && field_length >= 4 &&
+        shelly_scanner_) {
+      shelly_scanner_->handleServiceData(mac, bytes + 2, field_length - 1,
+                                         report->rssi);
+    }
     if (type == BLE_GAP_AD_TYPE_MANUFACTURER_SPECIFIC_DATA && field_length >= 4) {
       const uint8_t* manufacturer = bytes + 2;
       const size_t manufacturer_length = field_length - 1;
@@ -79,9 +86,11 @@ void Scanner::handleReport(ble_gap_evt_adv_report_t* report) {
 
 #else
 
-bool Scanner::begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner) {
+bool Scanner::begin(ConfigStore* config, ruuvi::Scanner* ruuvi_scanner,
+                    shelly::Scanner* shelly_scanner) {
   config_ = config;
   ruuvi_scanner_ = ruuvi_scanner;
+  shelly_scanner_ = shelly_scanner;
   memset(states_, 0, sizeof(states_));
   return false;
 }

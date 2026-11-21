@@ -1,20 +1,24 @@
-# MeshCore Victron and Ruuvi BLE Sensor
+# MeshCore Victron, Ruuvi and Shelly BLE Sensor
 
-Firmware for a RAK4631 that reads encrypted Victron Instant Readout and Ruuvi
-RAWv2 BLE advertisements and exposes the values as MeshCore Cayenne LPP telemetry.
+Firmware for a RAK4631 that reads encrypted Victron Instant Readout, Ruuvi
+RAWv2 and Shelly BLU H&T BTHome advertisements and exposes the values as
+MeshCore Cayenne LPP telemetry.
 It can optionally publish compact status and alarm messages on a private
 MeshCore channel.
 
 The first version supports:
 
 - Victron Solar Charger records (`0x01`), including small SmartSolar MPPTs.
+- Victron Battery Monitor records (`0x02`), including BMV-712 and SmartShunt.
 - Victron AC Charger records (`0x08`), used by supported Blue Smart chargers.
 - Up to four configured Victron devices.
 - Up to four RuuviTags using Data Format 5 (RAWv2), with discovery from the CLI.
 - Ruuvi temperature, humidity, pressure and battery voltage as Cayenne LPP.
+- Up to four Shelly BLU H&T sensors using unencrypted BTHome v2.
+- Shelly temperature, humidity and battery percentage as Cayenne LPP.
 - Native MeshCore telemetry requests and subscriptions.
 - GPS through MeshCore's existing RAK4631 sensor support.
-- Optional periodic private-channel status, charger-error alarms and stale-BLE alarms.
+- Optional periodic private-channel status, charger/battery alarms and stale-BLE alarms.
 - Reproducible GitHub Actions firmware builds.
 - Tagged GitHub Releases with UF2, Nordic DFU ZIP and HEX downloads.
 
@@ -45,9 +49,10 @@ and [HOME_ASSISTANT.md](docs/HOME_ASSISTANT.md).
 ## Current status
 
 The decoder host tests pass and the `RAK_4631_victron_sensor` target compiles.
-The resulting v0.2.0 build uses about 36 KB RAM and 441 KB flash. Hardware
-validation against a real RuuviTag and the exact charger models is still
-required before calling it stable.
+The resulting v0.3.0 build uses about 36 KB RAM and 449 KB flash. The Ruuvi
+path has been validated on hardware. Shelly BLU H&T, BMV-712, SmartShunt and
+the exact charger models still require hardware validation before calling them
+stable.
 
 Do not commit Victron keys or private-channel keys. Keys are saved in the
 RAK4631 internal filesystem and redacted by the CLI, but they are not encrypted
