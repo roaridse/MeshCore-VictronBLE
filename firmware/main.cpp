@@ -719,6 +719,11 @@ void loop() {
     const char c = Serial.read();
     if (c != '\n') command[length++] = c;
     command[length] = 0;
+    // Echo every received byte, as the upstream MeshCore sensor CLI does.
+    // Besides making an interactive terminal easier to use, this gives the
+    // web configurator an unambiguous indication that USB RX is working even
+    // if a command itself produces no textual reply.
+    Serial.print(c);
   }
   if (length == sizeof(command) - 1) command[length - 1] = '\r';
   if (length > 0 && command[length - 1] == '\r') {
@@ -728,6 +733,9 @@ void loop() {
     if (reply[0]) Serial.println(reply);
     command[0] = 0;
   }
+  // Keep board-specific watchdog and power-management housekeeping running.
+  // This is also present in MeshCore's upstream simple_sensor loop.
+  board.loop();
   the_mesh.loop();
   sensors.loop();
   victron_scanner.loop();

@@ -10,5 +10,10 @@ if [[ ! -f "${source_dir}/platformio.local.ini" ]]; then
   exit 2
 fi
 
-pio run -d "${source_dir}" -e RAK_4631_victron_sensor
+# The prepared MeshCore tree is a generated overlay and can easily become
+# stale between builds. Always refresh the project-owned sources and build
+# configuration before invoking PlatformIO.
+cp -a "${project_dir}/firmware/." "${source_dir}/firmware/"
+cp "${project_dir}/config/platformio.local.ini" "${source_dir}/platformio.local.ini"
 
+pio run -d "${source_dir}" -e RAK_4631_victron_sensor

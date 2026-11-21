@@ -49,7 +49,7 @@ and [HOME_ASSISTANT.md](docs/HOME_ASSISTANT.md).
 ## Current status
 
 The decoder host tests pass and the `RAK_4631_victron_sensor` target compiles.
-The resulting v0.3.0 build uses about 36 KB RAM and 449 KB flash. The Ruuvi
+The resulting v0.3.1 build uses about 36 KB RAM and 449 KB flash. The Ruuvi
 path has been validated on hardware. Shelly BLU H&T, BMV-712, SmartShunt and
 the exact charger models still require hardware validation before calling them
 stable.
