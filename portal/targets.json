@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "packages": [
+    {
+      "profile": {
+        "id": "universal-ble",
+        "name": "Universal BLE sensor node"
+      },
+      "board": {
+        "id": "rak4631",
+        "name": "RAK WisBlock RAK4631",
+        "mcu": "nRF52840",
+        "flashMethod": "nrf52-dfu-or-uf2"
+      },
+      "environment": "RAK_4631_victron_sensor",
+      "artifactBaseName": "RAK4631-BLE-Sensor",
+      "description": "MeshCore sensor node for Victron Instant Readout, Ruuvi RAWv2, and Shelly BLU H&T.",
+      "features": [
+        "Victron",
+        "Ruuvi",
+        "Shelly",
+        "Cayenne LPP",
+        "Private status channel"
+      ],
+      "validation": "hardware-partial",
+      "artifacts": {
+        "uf2": "{base}-{version}.uf2",
+        "dfu": "{base}-{version}.zip",
+        "hex": "{base}-{version}.hex"
+      }
+    }
+  ]
+}

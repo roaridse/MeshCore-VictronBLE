@@ -6,6 +6,12 @@ The workflow in `.github/workflows/build.yml` runs the decoder tests, checks
 out the pinned MeshCore revision and builds the RAK4631 firmware. Download the
 `RAK4631-Victron-Ruuvi-Shelly-BLE` artifact from a completed workflow run.
 
+Supported portal profiles and boards are declared in `portal/targets.json`.
+Tagged releases generate and upload `portal-manifest.json` alongside the UF2,
+Nordic DFU ZIP and HEX files. The manifest contains the release URL, size and
+SHA-256 digest for every firmware asset and is intended to be consumed by the
+MeshCore Sensor Portal.
+
 No keys are required during compilation. All device and channel credentials
 are provisioned after flashing, so public CI logs and firmware artifacts do
 not contain your secrets.
@@ -54,8 +60,22 @@ git push origin v0.3.0
 
 A tag beginning with `v` runs the same tests and build before a separate job is
 allowed to create the release. It attaches versioned `.uf2`, `.zip` and `.hex`
-files and generates release notes from the commits. Re-running the job replaces
-the assets on an existing release.
+files, creates `portal-manifest.json`, and generates release notes from the
+commits. The release fails if the tag does not match `FIRMWARE_VERSION` in
+`config/platformio.local.ini`. Re-running the job replaces the assets on an
+existing release.
+
+Test the manifest generator without building the firmware:
+
+```sh
+node tests/test_manifest.mjs
+```
+
+If the repository secret `PORTAL_DISPATCH_TOKEN` is configured, a successful
+release immediately triggers the Sensor Portal deployment. Without it, the
+portal discovers the release during its nightly synchronization. The complete
+one-time token setup is documented in the portal repository under
+`docs/FIRMWARE_AUTOMATION.md`.
 
 The UF2 uses the official nRF52840 family ID `0xADA52840` and starts at the
 RAK4631 application address `0x26000`. Double-press RESET to enter the RAK4631

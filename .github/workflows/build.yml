@@ -25,6 +25,9 @@ jobs:
       - name: Run host decoder tests
         run: ./scripts/test.sh
 
+      - name: Test portal manifest generator
+        run: node tests/test_manifest.mjs
+
       - name: Prepare firmware overlay
         run: |
           git -C meshcore apply "$GITHUB_WORKSPACE/patches/meshcore-sensor-hooks.patch"
@@ -64,6 +67,9 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Check out this project
+        uses: actions/checkout@v4
+
       - name: Download verified firmware
         uses: actions/download-artifact@v4
         with:
@@ -75,6 +81,17 @@ jobs:
           mv release-files/firmware.uf2 "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.uf2"
           mv release-files/firmware.zip "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.zip"
           mv release-files/firmware.hex "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.hex"
+
+      - name: Generate portal manifest
+        run: |
+          node scripts/generate-portal-manifest.mjs \
+            --targets portal/targets.json \
+            --artifacts release-files \
+            --output release-files/portal-manifest.json \
+            --version "$GITHUB_REF_NAME" \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --firmware-config config/platformio.local.ini
 
       - name: Create or update GitHub Release
         env:
@@ -89,3 +106,20 @@ jobs:
               --generate-notes \
               --title "$GITHUB_REF_NAME"
           fi
+
+      - name: Notify Sensor Portal
+        env:
+          PORTAL_DISPATCH_TOKEN: ${{ secrets.PORTAL_DISPATCH_TOKEN }}
+        run: |
+          if [[ -z "${PORTAL_DISPATCH_TOKEN:-}" ]]; then
+            echo "::notice::PORTAL_DISPATCH_TOKEN is not configured; the portal will update on its nightly schedule."
+            exit 0
+          fi
+          jq -n \
+            --arg tag "$GITHUB_REF_NAME" \
+            --arg repository "$GITHUB_REPOSITORY" \
+            '{event_type:"firmware_released",client_payload:{tag:$tag,repository:$repository}}' \
+            | GH_TOKEN="$PORTAL_DISPATCH_TOKEN" gh api \
+                --method POST \
+                "repos/roaridse/MeshCore-Sensor-Portal/dispatches" \
+                --input -
