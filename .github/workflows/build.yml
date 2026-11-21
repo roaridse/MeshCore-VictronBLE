@@ -9,8 +9,34 @@ permissions:
   contents: read
 
 jobs:
-  test-and-build:
+  test:
     runs-on: ubuntu-latest
+    steps:
+      - name: Check out this project
+        uses: actions/checkout@v4
+
+      - name: Run host decoder tests
+        run: ./scripts/test.sh
+
+      - name: Test portal manifest generator
+        run: node tests/test_manifest.mjs
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - id: rak4631
+            environment: RAK_4631_victron_sensor
+            artifact_base: RAK4631-BLE-Sensor
+          - id: heltec-t114
+            environment: Heltec_T114_victron_sensor
+            artifact_base: Heltec-T114-BLE-Sensor
+          - id: rak-wismesh-tag
+            environment: RAK_WisMesh_Tag_victron_sensor
+            artifact_base: WisMesh-Tag-BLE-Sensor
     steps:
       - name: Check out this project
         uses: actions/checkout@v4
@@ -22,12 +48,6 @@ jobs:
           ref: 75b04ef06def54b348400cb1b138afb6749ffd4f
           path: meshcore
 
-      - name: Run host decoder tests
-        run: ./scripts/test.sh
-
-      - name: Test portal manifest generator
-        run: node tests/test_manifest.mjs
-
       - name: Prepare firmware overlay
         run: |
           git -C meshcore apply "$GITHUB_WORKSPACE/patches/meshcore-sensor-hooks.patch"
@@ -37,32 +57,39 @@ jobs:
       - name: Install PlatformIO
         run: pip install --disable-pip-version-check platformio==6.1.18
 
-      - name: Build RAK4631 firmware
-        run: pio run -d meshcore -e RAK_4631_victron_sensor
+      - name: Build ${{ matrix.target.id }} firmware
+        run: pio run -d meshcore -e "${{ matrix.target.environment }}"
 
       - name: Create and verify UF2
         run: |
           python meshcore/bin/uf2conv/uf2conv.py \
             -f 0xADA52840 \
-            -c meshcore/.pio/build/RAK_4631_victron_sensor/firmware.hex \
-            -o meshcore/.pio/build/RAK_4631_victron_sensor/firmware.uf2
+            -c "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.hex" \
+            -o "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.uf2"
           python meshcore/bin/uf2conv/uf2conv.py \
-            -i meshcore/.pio/build/RAK_4631_victron_sensor/firmware.uf2
+            -i "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.uf2"
+
+      - name: Stage release files
+        run: |
+          mkdir -p release-files
+          cp "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.uf2" \
+            "release-files/${{ matrix.target.artifact_base }}.uf2"
+          cp "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.zip" \
+            "release-files/${{ matrix.target.artifact_base }}.zip"
+          cp "meshcore/.pio/build/${{ matrix.target.environment }}/firmware.hex" \
+            "release-files/${{ matrix.target.artifact_base }}.hex"
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RAK4631-Victron-Ruuvi-Shelly-BLE
-          path: |
-            meshcore/.pio/build/RAK_4631_victron_sensor/firmware.zip
-            meshcore/.pio/build/RAK_4631_victron_sensor/firmware.uf2
-            meshcore/.pio/build/RAK_4631_victron_sensor/firmware.hex
+          name: firmware-${{ matrix.target.id }}
+          path: release-files
           if-no-files-found: error
 
   release:
     name: Publish tagged release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: test-and-build
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -73,14 +100,17 @@ jobs:
       - name: Download verified firmware
         uses: actions/download-artifact@v4
         with:
-          name: RAK4631-Victron-Ruuvi-Shelly-BLE
+          pattern: firmware-*
+          merge-multiple: true
           path: release-files
 
       - name: Give release assets versioned names
         run: |
-          mv release-files/firmware.uf2 "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.uf2"
-          mv release-files/firmware.zip "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.zip"
-          mv release-files/firmware.hex "release-files/RAK4631-BLE-Sensor-${GITHUB_REF_NAME}.hex"
+          for source in release-files/*; do
+            extension="${source##*.}"
+            stem="${source%.*}"
+            mv "$source" "${stem}-${GITHUB_REF_NAME}.${extension}"
+          done
 
       - name: Generate portal manifest
         run: |

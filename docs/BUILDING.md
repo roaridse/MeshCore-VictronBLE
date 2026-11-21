@@ -3,8 +3,9 @@
 ## GitHub Actions
 
 The workflow in `.github/workflows/build.yml` runs the decoder tests, checks
-out the pinned MeshCore revision and builds the RAK4631 firmware. Download the
-`RAK4631-Victron-Ruuvi-Shelly-BLE` artifact from a completed workflow run.
+out the pinned MeshCore revision and builds firmware for all declared boards.
+A completed workflow contains `firmware-rak4631`, `firmware-heltec-t114`, and
+`firmware-rak-wismesh-tag` artifacts.
 
 Supported portal profiles and boards are declared in `portal/targets.json`.
 Tagged releases generate and upload `portal-manifest.json` alongside the UF2,
@@ -37,10 +38,12 @@ Build it:
 ./scripts/build.sh
 ```
 
-The primary artifact is:
+Each target produces Nordic DFU ZIP and HEX files under its build directory:
 
 ```text
 .build/MeshCore/.pio/build/RAK_4631_victron_sensor/firmware.zip
+.build/MeshCore/.pio/build/Heltec_T114_victron_sensor/firmware.zip
+.build/MeshCore/.pio/build/RAK_WisMesh_Tag_victron_sensor/firmware.zip
 ```
 
 ## GitHub releases and UF2
@@ -54,8 +57,8 @@ To publish a GitHub Release, first update `FIRMWARE_VERSION` in
 a matching version tag:
 
 ```sh
-git tag -a v0.3.0 -m "v0.3.0"
-git push origin v0.3.0
+git tag -a v0.5.0 -m "v0.5.0"
+git push origin v0.5.0
 ```
 
 A tag beginning with `v` runs the same tests and build before a separate job is
@@ -77,10 +80,11 @@ portal discovers the release during its nightly synchronization. The complete
 one-time token setup is documented in the portal repository under
 `docs/FIRMWARE_AUTOMATION.md`.
 
-The UF2 uses the official nRF52840 family ID `0xADA52840` and starts at the
-RAK4631 application address `0x26000`. Double-press RESET to enter the RAK4631
-UF2 bootloader, then copy the `.uf2` file to the mounted bootloader drive. This
-is an application update; it does not install or replace the bootloader.
+The UF2 files use the official nRF52840 family ID `0xADA52840` and the
+SoftDevice 6 application layout used by these three MeshCore board profiles.
+Enter the board's UF2 bootloader, then copy only the matching board artifact to
+the mounted bootloader drive. This is an application update; it does not
+install or replace the bootloader.
 
 Run the portable decoder tests separately with:
 
@@ -93,7 +97,7 @@ tree. Choose another destination when testing a new clean build:
 
 ```sh
 ./scripts/prepare-meshcore.sh /tmp/meshcore-victron-build
-pio run -d /tmp/meshcore-victron-build -e RAK_4631_victron_sensor
+./scripts/build.sh /tmp/meshcore-victron-build
 ```
 
 ## Publishing on GitHub
@@ -103,7 +107,7 @@ Create an empty GitHub repository, then from this directory run:
 ```sh
 git init -b main
 git add .
-git commit -m "Initial RAK4631 Victron BLE sensor"
+git commit -m "Initial MeshCore BLE sensor firmware"
 git remote add origin git@github.com:YOUR_USER/MeshCore-VictronBLE.git
 git push -u origin main
 ```

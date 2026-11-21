@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { generatePortalManifest, validateFirmwareVersion } from "../scripts/generate-portal-manifest.mjs";
+import { generatePortalManifest, validateFirmwareVersion, validateTargets } from "../scripts/generate-portal-manifest.mjs";
+
+const configuredTargets = JSON.parse(await readFile(new URL("../portal/targets.json", import.meta.url), "utf8"));
+validateTargets(configuredTargets);
+assert.deepEqual(
+  configuredTargets.packages.map((target) => target.board.id),
+  ["rak4631", "heltec-t114", "rak-wismesh-tag"]
+);
+assert.equal(new Set(configuredTargets.packages.map((target) => target.environment)).size, 3);
 
 const root = await mkdtemp(join(tmpdir(), "meshcore-manifest-"));
 const artifacts = join(root, "release-files");

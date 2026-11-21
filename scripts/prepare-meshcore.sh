@@ -19,5 +19,4 @@ cp -R "${project_dir}/firmware" "${destination}/firmware"
 cp "${project_dir}/config/platformio.local.ini" "${destination}/platformio.local.ini"
 
 echo "Prepared MeshCore ${meshcore_commit} in ${destination}"
-echo "Build with: pio run -d ${destination} -e RAK_4631_victron_sensor"
-
+echo "Build all sensor targets with: ${project_dir}/scripts/build.sh ${destination}"

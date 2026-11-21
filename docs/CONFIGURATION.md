@@ -1,6 +1,6 @@
 # Configuration
 
-Connect to the RAK4631 USB serial port at 115200 baud after flashing. Commands
+Connect to the sensor node's USB serial port at 115200 baud after flashing. Commands
 are terminated by carriage return/newline.
 
 ## Initial MeshCore setup
@@ -147,7 +147,7 @@ direct peer message; use the LPP peer path for authoritative telemetry.
 
 ## GPS
 
-GPS uses the standard MeshCore RAK4631 sensor settings and a compatible GPS
-module such as the RAK1910. Enable it through the MeshCore sensor CLI. Position
-is placed in the encrypted telemetry response rather than the private text
-status in this release.
+GPS uses the standard MeshCore settings for the selected board and requires
+compatible GPS hardware, such as the RAK1910 on RAK4631. Enable it through the
+MeshCore sensor CLI. Position is placed in the encrypted telemetry response
+rather than the private text status in this release.

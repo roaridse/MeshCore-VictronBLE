@@ -28,6 +28,62 @@
         "dfu": "{base}-{version}.zip",
         "hex": "{base}-{version}.hex"
       }
+    },
+    {
+      "profile": {
+        "id": "universal-ble",
+        "name": "Universal BLE sensor node"
+      },
+      "board": {
+        "id": "heltec-t114",
+        "name": "Heltec Mesh Node T114 (no display)",
+        "mcu": "nRF52840",
+        "flashMethod": "nrf52-dfu-or-uf2"
+      },
+      "environment": "Heltec_T114_victron_sensor",
+      "artifactBaseName": "Heltec-T114-BLE-Sensor",
+      "description": "MeshCore sensor node for the displayless Heltec T114, with Victron Instant Readout, Ruuvi RAWv2, and Shelly BLU H&T.",
+      "features": [
+        "Victron",
+        "Ruuvi",
+        "Shelly",
+        "Cayenne LPP",
+        "Private status channel"
+      ],
+      "validation": "build-only",
+      "artifacts": {
+        "uf2": "{base}-{version}.uf2",
+        "dfu": "{base}-{version}.zip",
+        "hex": "{base}-{version}.hex"
+      }
+    },
+    {
+      "profile": {
+        "id": "universal-ble",
+        "name": "Universal BLE sensor node"
+      },
+      "board": {
+        "id": "rak-wismesh-tag",
+        "name": "RAK WisMesh Tag",
+        "mcu": "nRF52840",
+        "flashMethod": "nrf52-dfu-or-uf2"
+      },
+      "environment": "RAK_WisMesh_Tag_victron_sensor",
+      "artifactBaseName": "WisMesh-Tag-BLE-Sensor",
+      "description": "MeshCore sensor node for RAK WisMesh Tag, with Victron Instant Readout, Ruuvi RAWv2, and Shelly BLU H&T.",
+      "features": [
+        "Victron",
+        "Ruuvi",
+        "Shelly",
+        "Cayenne LPP",
+        "Private status channel"
+      ],
+      "validation": "build-only",
+      "artifacts": {
+        "uf2": "{base}-{version}.uf2",
+        "dfu": "{base}-{version}.zip",
+        "hex": "{base}-{version}.hex"
+      }
     }
   ]
 }

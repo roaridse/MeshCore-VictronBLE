@@ -16,4 +16,7 @@ fi
 cp -a "${project_dir}/firmware/." "${source_dir}/firmware/"
 cp "${project_dir}/config/platformio.local.ini" "${source_dir}/platformio.local.ini"
 
-pio run -d "${source_dir}" -e RAK_4631_victron_sensor
+pio run -d "${source_dir}" \
+  -e RAK_4631_victron_sensor \
+  -e Heltec_T114_victron_sensor \
+  -e RAK_WisMesh_Tag_victron_sensor
