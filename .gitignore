@@ -1,0 +1,8 @@
+.build/
+.pio/
+.venv/
+*.key
+*.secret
+secrets.*
+firmware.zip
+AGENTS.md

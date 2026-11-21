@@ -1,0 +1,64 @@
+diff --git a/examples/simple_sensor/SensorMesh.h b/examples/simple_sensor/SensorMesh.h
+index 77eead0..1f8be77 100644
+--- a/examples/simple_sensor/SensorMesh.h
++++ b/examples/simple_sensor/SensorMesh.h
+@@ -99,6 +99,10 @@ protected:
+   float getAltitude(uint8_t channel) { return getTelemValue(channel, LPP_ALTITUDE); }
+   bool  getGPS(uint8_t channel, float& lat, float& lon, float& alt);
+ 
++  // Downstream sensor applications can append values to every telemetry response.
++  virtual void appendCustomTelemetry(CayenneLPP& destination) { }
++  bool sendChannelMessage(const mesh::GroupChannel& channel, const char* text);
++
+   // alerts
+   enum AlertPriority : uint8_t { LOW_PRI_ALERT, HIGH_PRI_ALERT };
+ 
+diff --git a/examples/simple_sensor/SensorMesh.cpp b/examples/simple_sensor/SensorMesh.cpp
+index a78cc96..90a6a87 100644
+--- a/examples/simple_sensor/SensorMesh.cpp
++++ b/examples/simple_sensor/SensorMesh.cpp
+@@ -152,6 +152,7 @@ uint8_t SensorMesh::handleRequest(ClientInfo* from, uint32_t sender_timestamp, u
+     telemetry.addVoltage(TELEM_CHANNEL_SELF, (float)board.getBattMilliVolts() / 1000.0f);
+     // query other sensors -- target specific
+     sensors.querySensors(0xFF & perm_mask, telemetry);  // allow all telemetry permissions for admin or guest
++    appendCustomTelemetry(telemetry);
+     // TODO: let requester know permissions they have:  telemetry.addPresence(TELEM_CHANNEL_SELF, perms);
+     float temperature = board.getMCUTemperature();
+     if (!isnan(temperature)) {   // Supported boards with built-in temperature sensor. ESP32-C3 may return NAN
+@@ -258,6 +259,28 @@ void SensorMesh::sendAlert(const ClientInfo* c, Trigger* t) {
+   t->send_expiry = futureMillis(ALERT_ACK_EXPIRY_MILLIS);
+ }
+ 
++bool SensorMesh::sendChannelMessage(const mesh::GroupChannel& channel, const char* text) {
++  if (text == NULL || text[0] == 0) return false;
++  constexpr int max_text_len = 160;
++  uint8_t data[5 + max_text_len];
++  uint32_t timestamp = getRTCClock()->getCurrentTimeUnique();
++  memcpy(data, &timestamp, 4);
++  data[4] = 0;  // TXT_TYPE_PLAIN
++
++  const char* name = _prefs.node_name;
++  int prefix_len = snprintf((char*)&data[5], max_text_len, "%s: ", name);
++  if (prefix_len < 0 || prefix_len >= max_text_len) return false;
++  int text_len = strlen(text);
++  if (text_len > max_text_len - prefix_len) text_len = max_text_len - prefix_len;
++  memcpy(&data[5 + prefix_len], text, text_len);
++
++  mesh::Packet* packet = createGroupDatagram(PAYLOAD_TYPE_GRP_TXT, channel, data,
++                                             5 + prefix_len + text_len);
++  if (packet == NULL) return false;
++  sendFloodScoped(default_scope, packet, 0, _prefs.path_hash_mode + 1);
++  return true;
++}
++
+ void SensorMesh::alertIf(bool condition, Trigger& t, AlertPriority pri, const char* text) {
+   if (condition) {
+     if (!t.isTriggered() && num_alert_tasks < MAX_CONCURRENT_ALERTS) {
+@@ -1032,6 +1055,7 @@ void SensorMesh::loop() {
+     telemetry.addVoltage(TELEM_CHANNEL_SELF, (float)board.getBattMilliVolts() / 1000.0f);
+     // query other sensors -- target specific
+     sensors.querySensors(0xFF, telemetry);  // allow all telemetry permissions
++    appendCustomTelemetry(telemetry);
+   	// This MCU temperature will be overridden by external sensors (if any)
+     float temperature = board.getMCUTemperature();
+     if (!isnan(temperature)) {   // Supported boards with built-in temperature sensor. ESP32-C3 may return NAN
